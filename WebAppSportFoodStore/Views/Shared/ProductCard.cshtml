@@ -1,0 +1,304 @@
+﻿@* Views/Shared/ProductCard.cshtml *@
+@using System.Globalization
+@using APISportFoodStore.Models
+@model object
+
+@{
+    var dto = Model as ProductDto;
+    var p = Model as Product;
+
+    int id = dto?.IdProduct ?? (p?.IdProduct ?? 0);
+    string name = dto?.Name ?? p?.Name ?? "Без названия";
+    string? article = dto?.Article ?? p?.Article;
+    string? image = dto?.Image ?? p?.Image;
+    decimal price = dto?.Price ?? p?.Price ?? 0m;
+    decimal volWeight = dto?.VolumeOrWeight ?? p?.VolumeOrWeight ?? 0m;
+    string unit = dto?.Unit ?? p?.Unit ?? "";
+
+    // --- Производитель с фолбэками ---
+    // 1) из DTO (предпочтительно)
+    // 2) из нав. свойства Product.Manufacturer?.Name (если есть)
+    // 3) из ViewBag.Manufacturers по ManufacturerID (если прокинут список в родительском вью)
+    string? manufacturerName = dto?.ManufacturerName;
+    if (string.IsNullOrWhiteSpace(manufacturerName))
+    {
+
+
+        // попытка найти в ViewBag по ID
+        if (string.IsNullOrWhiteSpace(manufacturerName))
+        {
+            try
+            {
+                var manufacturers = ViewBag.Manufacturers as List<Manufacturer>;
+                var mId = dto?.ManufacturerID ?? p?.ManufacturerId;
+                if (manufacturers != null && mId.HasValue)
+                    manufacturerName = manufacturers.FirstOrDefault(x => x.IdManufacturer == mId.Value)?.Name;
+            }
+            catch { /* ignore */ }
+        }
+    }
+
+    bool isAvailable = p?.IsAvailable ?? true;
+    int qty = p?.Quantity ?? 0;
+
+    decimal? kcal = dto?.CaloriesKcal ?? p?.CaloriesKcal;
+    decimal? prot = dto?.ProteinG ?? p?.ProteinG;
+    decimal? fat = dto?.FatG ?? p?.FatG;
+    decimal? carbs = dto?.CarbsG ?? p?.CarbsG;
+
+    bool hasNutrition = kcal.HasValue || prot.HasValue || fat.HasValue || carbs.HasValue;
+
+    var ru = new CultureInfo("ru-RU");
+    string priceText = price.ToString("C0", ru);
+    string volText = volWeight > 0 ? $"{volWeight:0.##} {unit}" : unit;
+
+    var detailsUrl = Url.Action("Details", "Catalog", new { id });
+
+    var inCartSet = ViewBag.CartProductIds as HashSet<int>;
+    bool inCart = (inCartSet != null && id > 0) ? inCartSet.Contains(id) : false;
+
+    var favSet = ViewBag.FavoriteProductIds as HashSet<int>;
+    bool inFav = (favSet != null && id > 0) ? favSet.Contains(id) : false;
+
+    var pid = id;
+    var addUrl = Url.Action("Add", "Cart");
+}
+
+
+
+<div class="card product-card h-100 position-relative" data-product-id="@id">
+    <div class="position-relative">
+        <a href="@detailsUrl" class="d-block img-wrap" aria-label="Открыть @name">
+            <img src="@(string.IsNullOrWhiteSpace(image) ? "/images/placeholder-product.webp" : image)"
+                 alt="@name" class="w-100 h-100" loading="lazy" decoding="async" />
+        </a>
+
+    </div>
+
+    <div class="card-body d-flex flex-column">
+        @if (!string.IsNullOrWhiteSpace(manufacturerName))
+        {
+            <div class="text-muted small mb-1 text-truncate" title="@manufacturerName">@manufacturerName</div>
+        }
+
+
+        <h6 class="card-title mb-2" title="@name" style="line-height:1.2;">@name</h6>
+
+        @if (!string.IsNullOrWhiteSpace(volText))
+        {
+            <div class="text-muted small mb-2">@volText</div>
+        }
+
+
+        @* КБЖУ *@
+        @if (hasNutrition)
+        {
+            <div class="mb-3 d-flex flex-wrap gap-2">
+                @if (kcal.HasValue)
+                {
+                    <span class="nutr-chip">Ккал: @kcal.Value.ToString("0.#")</span>
+                }
+                @if (prot.HasValue)
+                {
+                    <span class="nutr-chip">Б: @prot.Value.ToString("0.#") г</span>
+                }
+                @if (fat.HasValue)
+                {
+                    <span class="nutr-chip">Ж: @fat.Value.ToString("0.#") г</span>
+                }
+                @if (carbs.HasValue)
+                {
+                    <span class="nutr-chip">У: @carbs.Value.ToString("0.#") г</span>
+                }
+            </div>
+        }
+
+        <div class="mt-auto">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <div class="price-tag">@priceText</div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button"
+                            class="js-fav-toggle @(inFav ? "active" : "")"
+                            data-product-id="@id"
+                            aria-pressed="@(inFav ? "true" : "false")"
+                            title="В избранное"
+                            style="
+                width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;
+                background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.08);border-radius:50%;
+                box-shadow:0 1px 3px rgba(0,0,0,.08);cursor:pointer;">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-8.6 1-1a5.5 5.5 0 0 0 0-7.8z"></path>
+                        </svg>
+                    </button>
+
+                    @if (inCart)
+                    {
+                        <button type="button" class="btn btn-outline-success disabled" disabled>
+                            В корзине
+                        </button>
+                    }
+                    else if (pid > 0 && addUrl != null)
+                    {
+                        <form method="post"
+                              action="@addUrl"
+                              class="add-to-cart-form m-0 d-flex align-items-stretch gap-2"
+                              data-product-id="@pid"
+                              data-available="@qty">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="productId" value="@pid" />
+
+                            <button type="submit" class="btn btn-primary">
+                                В корзину
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+          // Приводим qty к цифрам, уважаем min/max
+          function normalizeQty(input) {
+            const min = parseInt(input.getAttribute('min') || '1', 10);
+            const maxAttr = input.getAttribute('max');
+            const max = maxAttr ? parseInt(maxAttr, 10) : Number.MAX_SAFE_INTEGER;
+
+            let val = (input.value || '').replace(/\D/g, '');
+            if (val === '') val = '1';
+
+            let num = parseInt(val, 10);
+            if (isNaN(num) || num < 1) num = 1;
+            if (num < min) num = min;
+            if (num > max) num = max;
+
+            input.value = String(num);
+            return num;
+          }
+
+          // Если на странице уже есть твой restrictToDigits — используем его;
+          // если нет, подстрахуем простым фильтром input.
+          function wireQtyInput(el) {
+            if (!el) return;
+            try {
+              if (typeof restrictToDigits === 'function') {
+                restrictToDigits(el, 4); // до 9999
+              } else {
+                el.addEventListener('input', function () {
+                  this.value = this.value.replace(/\D/g, '').slice(0, 4);
+                });
+              }
+            } catch {}
+            el.addEventListener('blur', function(){ normalizeQty(el); });
+          }
+
+          // Инициализируем qty поля, если карточек много
+          document.querySelectorAll('.add-to-cart-form .qty-input').forEach(wireQtyInput);
+
+          // ЕДИНСТВЕННЫЙ делегированный обработчик "В корзину"
+          document.addEventListener('submit', async function (e) {
+            const form = e.target.closest('.add-to-cart-form');
+            if (!form) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const btn = form.querySelector('button[type="submit"]');
+            const qtyInput = form.querySelector('.qty-input');
+            if (qtyInput) normalizeQty(qtyInput);
+
+            const formData = new FormData(form);
+            const productId = form.dataset.productId;
+
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.textContent = 'Добавляем...';
+
+            try {
+              const resp = await fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+              });
+
+              if (resp.status === 401) {
+                window.location.href = '/Account/Authorization';
+                return;
+              }
+
+              if (!resp.ok) {
+                // Пробуем вытащить текст ошибки из API (BadRequest с сообщением)
+                let msg = 'Не удалось добавить в корзину';
+                try { msg = await resp.text() || msg; } catch {}
+                alert(msg);
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+              }
+
+              // Успех: фиксируем состояние
+              btn.classList.remove('btn-primary');
+              btn.classList.add('btn-outline-success');
+              btn.textContent = 'В корзине';
+              btn.disabled = true;
+
+              // Опционально: добавь тут обновление счётчика мини-корзины,
+              // если у тебя есть элемент #cart-counter:
+              // try {
+              //   const counter = document.getElementById('cart-counter');
+              //   if (counter) counter.textContent = String((parseInt(counter.textContent||'0',10)||0) + parseInt(qtyInput?.value||'1',10));
+              // } catch {}
+            } catch (err) {
+              alert('Ошибка сети. Попробуйте ещё раз.');
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
+          });
+
+          // ЕДИНСТВЕННЫЙ обработчик избранного (как и раньше, но без дублей)
+          document.addEventListener('click', async function (e) {
+            const btn = e.target.closest('.js-fav-toggle');
+            if (!btn) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const productId = btn.dataset.productId;
+            if (!productId) return;
+
+            // оптимистичный UI
+            btn.classList.toggle('active');
+            btn.setAttribute('aria-pressed', btn.classList.contains('active') ? 'true' : 'false');
+
+            try {
+              const form = new FormData();
+              form.append('productId', productId);
+
+              const resp = await fetch('/Favorites/Toggle', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: form
+              });
+
+              if (resp.status === 401) { window.location.href = '/Account/Authorization'; return; }
+
+              const data = await resp.json();
+              const active = !!data.inFavorites;
+              btn.classList.toggle('active', active);
+              btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            } catch {
+              // откат оптимистичного UI
+              btn.classList.toggle('active');
+              btn.setAttribute('aria-pressed', btn.classList.contains('active') ? 'true' : 'false');
+              alert('Не удалось изменить избранное');
+            }
+          });
+        })();
+    </script>
+}

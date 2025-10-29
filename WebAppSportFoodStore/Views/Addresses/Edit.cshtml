@@ -1,0 +1,149 @@
+﻿@model APISportFoodStore.Models.UserAddress
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = (Model.IdAddress ?? 0) == 0 ? "Добавить адрес" : "Редактировать адрес";
+}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<div class="container py-5">
+    <h1 class="h3 fw-bold mb-4">@ViewData["Title"]</h1>
+
+    @if (ViewBag.Error is string err && !string.IsNullOrWhiteSpace(err))
+    {
+        <div class="alert alert-danger">@err</div>
+    }
+
+    <form asp-action="Edit" method="post" class="row g-3">
+        @Html.AntiForgeryToken()
+
+        <input type="hidden" asp-for="IdAddress" />
+        <input type="hidden" asp-for="UserId" />
+        <input type="hidden" asp-for="Deleted" />
+
+        <div class="col-md-6">
+            <label class="form-label">Город *</label>
+            <input class="form-control" asp-for="City" required />
+        </div>
+
+        <div class="col-md-8">
+            <label class="form-label">Улица *</label>
+            <input class="form-control" asp-for="Street" required id="Street" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Дом *</label>
+            <input class="form-control" asp-for="House" required id="House" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Квартира</label>
+            <input class="form-control" asp-for="Apartament" />
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">Комментарий курьеру</label>
+            <textarea class="form-control" asp-for="CourierComment" rows="2"></textarea>
+        </div>
+
+        <div class="col-12">
+            <div class="card border-0 bg-light rounded-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-semibold">Указать на карте (необязательно)</div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="locateMe()">Моё местоположение</button>
+                    </div>
+                    <div id="map" style="height: 360px; border-radius: 1rem;"></div>
+                    <small class="text-muted">
+                        Кликните на карту — попробуем определить улицу и дом автоматически (OSM Nominatim).
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 d-flex gap-2">
+            <button class="btn btn-primary rounded-pill px-4" type="submit">Сохранить</button>
+            <a class="btn btn-outline-secondary rounded-pill px-4" asp-action="Index">Отмена</a>
+        </div>
+    </form>
+</div>
+
+<script>
+let map, marker;
+
+       function initMap() {
+            const moscow = [55.7558, 37.6173];
+            map = L.map('map').setView(moscow, 10);
+
+            // Пробуем разные бесплатные тайлы
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            // Запасной вариант если основной не работает
+            L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            map.on('click', async function (e) {
+                const latlng = e.latlng;
+                placeMarker(latlng);
+                await reverseGeocode(latlng.lat, latlng.lng);
+            });
+        }
+function placeMarker(latlng) {
+    if (marker) {
+        marker.setLatLng(latlng);
+    } else {
+        marker = L.marker(latlng, { draggable: true }).addTo(map);
+        marker.on('dragend', async function (ev) {
+            const p = ev.target.getLatLng();
+            await reverseGeocode(p.lat, p.lng);
+        });
+    }
+}
+
+async function reverseGeocode(lat, lon) {
+    try {
+        const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2&addressdetails=1`;
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!resp.ok) return;
+
+        const data = await resp.json();
+        const addr = data.address || {};
+
+        // Определяем поля
+        const street =
+            addr.road || addr.pedestrian || addr.footway || addr.path ||
+            addr.cycleway || addr.residential || '';
+        const house = addr.house_number || '';
+
+        // Попробуем вытащить город (разные варианты)
+        const city = addr.city || addr.town || addr.village || addr.hamlet || addr.county || '';
+
+        // Подставляем в поля формы, если нашли
+        if (city) document.getElementById('City').value = city;
+        if (street) document.getElementById('Street').value = street;
+        if (house) document.getElementById('House').value = house;
+    } catch (e) {
+        console.warn('Reverse geocode failed', e);
+    }
+}
+
+function locateMe() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+        const latlng = [pos.coords.latitude, pos.coords.longitude];
+        map.setView(latlng, 17);
+        placeMarker({ lat: latlng[0], lng: latlng[1] });
+        reverseGeocode(latlng[0], latlng[1]);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initMap);
+</script>

@@ -1,0 +1,150 @@
+﻿@using APISportFoodStore.Models
+@model IEnumerable<ProductDto>
+
+@{
+    ViewData["Title"] = "Каталог спортивного питания";
+    var items = Model?.ToList() ?? new List<ProductDto>();
+
+    var manufacturers = items
+        .GroupBy(x => new { x.ManufacturerID, x.ManufacturerName })
+        .OrderBy(g => g.Key.ManufacturerName)
+        .Select(g => g.Key)
+        .ToList();
+
+    var categories = ViewBag.Categories as List<Category> ?? new();
+}
+
+<div class="container py-4" id="catalog-root">
+    <div class="d-flex flex-wrap align-items-end gap-3 mb-4">
+        <div class="flex-grow-1">
+            <label class="form-label mb-1">Поиск</label>
+            <input type="search" class="form-control" id="q" placeholder="Название, артикул, производитель...">
+        </div>
+
+        <div>
+            <label class="form-label mb-1">Производитель</label>
+            <select id="manufacturer" class="form-select">
+                <option value="">Все</option>
+                @foreach (var m in manufacturers)
+                {
+                    <option value="@m.ManufacturerName">@m.ManufacturerName</option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class="form-label mb-1">Категория</label>
+            <select id="category" class="form-select">
+                <option value="">Все</option>
+                @foreach (var c in categories)
+                {
+                    <option value="@c.Name">@c.Name</option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class="form-label mb-1">Сортировка</label>
+            <select id="sort" class="form-select">
+                <option value="relevance">По релевантности</option>
+                <option value="price-asc">Цена ↑</option>
+                <option value="price-desc">Цена ↓</option>
+                <option value="name-asc">Название A→Z</option>
+                <option value="name-desc">Название Z→A</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="empty-state" class="alert alert-info d-none">
+        Ничего не найдено по заданным условиям.
+    </div>
+
+    <div id="grid" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3">
+        @foreach (var p in items)
+        {
+            var cat = (ViewBag.Categories as List<Category>)?
+            .FirstOrDefault(c => c.IdCategory == p.CategoryId)?.Name ?? "";
+            <div class="col" data-category="@cat">
+                @await Html.PartialAsync("~/Views/Shared/ProductCard.cshtml", p)
+            </div>
+        }
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        (function() {
+            // Соберём плоский список карточек для клиентской фильтрации (по DOM)
+            const root = document.getElementById('catalog-root');
+            if (!root) return;
+
+            const q = root.querySelector('#q');
+            const ddMan = root.querySelector('#manufacturer');
+            const ddCat = root.querySelector('#category');
+            const ddSort = root.querySelector('#sort');
+            const grid = root.querySelector('#grid');
+            const empty = root.querySelector('#empty-state');
+
+            const tiles = [...grid.querySelectorAll('.col')].map(col => {
+                const card = col.querySelector('.product-card');
+                const title = card.querySelector('.card-title')?.textContent?.trim() ?? '';
+                const subtitle = card.querySelector('.small.text-muted')?.textContent?.trim() ?? '';
+                const priceEl = card.querySelector('.fw-bold.fs-5');
+                const price = parsePrice(priceEl?.textContent ?? '0');
+
+                const id = card.dataset.productId ?? '';
+                const manufacturer = (subtitle.split('•')[0] || '').trim();
+                const category = col.dataset.category?.trim() ?? '';
+
+
+                return { col, card, id, title, subtitle, manufacturer, category, price };
+            });
+
+            function apply() {
+                const query = (q.value || '').toLowerCase();
+                const man = ddMan.value || '';
+                const cat = ddCat.value || '';
+                const sort = ddSort.value;
+
+                let filtered = tiles.filter(t => {
+                    const text = (t.title + ' ' + t.subtitle + ' ' + t.id).toLowerCase();
+                    if (query && !text.includes(query)) return false;
+                    if (man && t.manufacturer !== man) return false;
+                    if (cat && t.category !== cat) return false;
+                    return true;
+                });
+
+                // сортировка
+                if (sort === 'price-asc') {
+                    filtered.sort((a,b)=>a.price-b.price);
+                } else if (sort === 'price-desc') {
+                    filtered.sort((a,b)=>b.price-a.price);
+                } else if (sort === 'name-asc') {
+                    filtered.sort((a,b)=>a.title.localeCompare(b.title));
+                } else if (sort === 'name-desc') {
+                    filtered.sort((a,b)=>b.title.localeCompare(a.title));
+                } 
+
+                grid.innerHTML = '';
+                filtered.forEach(t => grid.appendChild(t.col));
+
+                empty.classList.toggle('d-none', filtered.length > 0);
+            }
+
+            function parsePrice(s) {
+                if (!s) return 0;
+                const norm = s.replace(/[^\d.,]/g, '').replace(',', '.');
+                const num = parseFloat(norm);
+                return isNaN(num) ? 0 : num;
+            }
+
+            q.addEventListener('input', apply);
+            ddMan.addEventListener('change', apply);
+            ddCat.addEventListener('change', apply);
+            ddSort.addEventListener('change', apply);
+
+            apply();
+        })();
+    </script>
+}

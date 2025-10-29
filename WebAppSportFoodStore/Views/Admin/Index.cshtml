@@ -1,0 +1,519 @@
+﻿@using System
+@using System.Collections
+@using System.Collections.Generic
+@using System.Reflection
+@using System.ComponentModel.DataAnnotations
+@using System.ComponentModel.DataAnnotations.Schema
+
+@{
+    Layout = "_Layout";
+    bool isListMode = Model != null && Model is IEnumerable && Model.GetType().IsGenericType;
+
+    string title = isListMode
+        ? $"Список: {Model.GetType().GetGenericArguments()[0].Name}"
+        : "Панель администратора";
+    ViewData["Title"] = title;
+
+    // Контроллер по типу сущности
+    Func<Type, string> GetControllerFor = (Type t) =>
+    {
+        var name = t.Name;
+        switch (name)
+        {
+            case "Product": return "AdminProduct";
+            case "Manufacturer": return "AdminManufacturer";
+            case "Category": return "AdminCategory";
+            case "User": return "AdminUser";
+            default: return "Admin";
+        }
+    };
+
+    // Красивые заголовки колонок
+    Func<string, string> Nice = (string prop) =>
+    {
+        switch (prop)
+        {
+            case "IdProduct":
+            case "IdCategory":
+            case "IdManufacturer":
+            case "IdUser":
+                return "ID";
+            case "Name": return "Название";
+            case "Article": return "Артикул";
+            case "CategoryId": return "Категория";
+            case "ManufacturerId": return "Производитель";
+            case "Unit": return "Ед.";
+            case "VolumeOrWeight": return "Объём/Вес";
+            case "Price": return "Цена";
+            case "Quantity": return "Кол-во";
+            case "IsAvailable": return "В наличии";
+            case "Deleted": return "Удалён";
+            default: return prop;
+        }
+    };
+
+    // Ключи в ViewData: нормальные множественные формы
+    var pluralMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Category"] = "Categories",
+        ["Manufacturer"] = "Manufacturers",
+        ["User"] = "Users",
+        ["Product"] = "Products",
+        ["Role"] = "Roles",
+        ["Order"] = "Orders"
+    };
+
+    // 1) Достаём список из ViewData как из словаря (кейсы игнорим)
+    Func<string, IEnumerable<object>> GetViewDataList = (string name) =>
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+
+        // прямой доступ
+        if (ViewData.ContainsKey(name))
+            return ViewData[name] as IEnumerable<object>;
+
+        // поиск кейс-инсенситивным способом
+        foreach (var kv in ViewData)
+            if (kv.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+                return kv.Value as IEnumerable<object>;
+
+        return null;
+    };
+
+    // 2) Находим связанную сущность по FK, с корректной плюрализацией и разными схемами Id
+    Func<object, string, object> GetRelatedEntity = (object entity, string foreignKeyName) =>
+    {
+        if (entity == null || string.IsNullOrWhiteSpace(foreignKeyName)) return null;
+
+        var entityType = entity.GetType();
+        var fkProp = entityType.GetProperty(foreignKeyName);
+        if (fkProp == null) return null;
+
+        var fkValue = fkProp.GetValue(entity);
+        if (fkValue == null) return null;
+
+        // Имя типа связанной сущности (CategoryId -> Category)
+        var relatedTypeName = foreignKeyName.EndsWith("Id", StringComparison.OrdinalIgnoreCase)
+            ? foreignKeyName.Substring(0, foreignKeyName.Length - 2)
+            : foreignKeyName;
+
+        // Правильный ключ в ViewData (Categories vs Categorys)
+        string viewDataKey = pluralMap.TryGetValue(relatedTypeName, out var plural)
+            ? plural
+            : relatedTypeName + "s"; // на случай, если карта не заполнена
+
+        // Попытка 1: по карте/множественному
+        var relatedList = GetViewDataList(viewDataKey)
+            // Попытка 2: по навигационному имени (иногда кладут "Category" вместо "Categories")
+            ?? GetViewDataList(relatedTypeName);
+
+        if (relatedList == null) return null;
+
+        // Приведение fk к "долгому" для безопасного сравнения разных numeric типов
+        long? fkLong = null;
+        try { fkLong = Convert.ToInt64(fkValue); } catch { /* бывает string guid и т.п. */ }
+
+        foreach (var related in relatedList)
+        {
+            var rt = related.GetType();
+
+            // разные схемы именования ключа: IdCategory | CategoryId | Id | (иногда Guid)
+            var idProp =
+                rt.GetProperty("Id" + relatedTypeName) ??
+                rt.GetProperty(relatedTypeName + "Id") ??
+                rt.GetProperty("Id");
+
+            if (idProp == null) continue;
+
+            var idVal = idProp.GetValue(related);
+
+            // 1) числовое сравнение
+            if (fkLong.HasValue)
+            {
+                try
+                {
+                    var idLong = Convert.ToInt64(idVal);
+                    if (idLong == fkLong.Value) return related;
+                }
+                catch { /* не число — пойдём строкой */ }
+            }
+
+            // 2) строковое сравнение (на случай GUID/строки)
+            if (idVal != null && fkValue != null &&
+                string.Equals(idVal.ToString(), fkValue.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                return related;
+            }
+        }
+
+        return null;
+    };
+
+    // 3) Человечное имя связанной сущности
+    Func<object, string> GetRelatedEntityName = (object relatedEntity) =>
+    {
+        if (relatedEntity == null) return "-";
+        var t = relatedEntity.GetType();
+        var nameProp = t.GetProperty("Name") ??
+                       t.GetProperty("Title") ??
+                       t.GetProperty("Email") ??
+                       t.GetProperty("FullName");
+        return nameProp?.GetValue(relatedEntity)?.ToString() ?? relatedEntity.ToString();
+    };
+
+}
+
+<div class="admin-container">
+    @* --- РЕЖИМ 1: ДАШБОРД С БЛОКАМИ --- *@
+    @if (!isListMode)
+    {
+        <div class="admin-header">
+            <h1 class="admin-title">@title</h1>
+            <p class="admin-subtitle">Управление магазином спортивного питания</p>
+        </div>
+
+        <div class="admin-grid">
+            <a class="admin-card" asp-controller="AdminProduct" asp-action="Index">
+                <div class="card-content">
+                    <h3>Товары</h3>
+                    <p>Протеины, аминокислоты, витамины и добавки</p>
+                    <div class="kpi">@((ViewBag.Products as IEnumerable<object>)?.Cast<object>().Count() ?? 0)</div>
+                </div>
+            </a>
+
+            <a class="admin-card" asp-controller="AdminManufacturer" asp-action="Index">
+                <div class="card-content">
+                    <h3>Производители</h3>
+                    <p>Бренды и поставщики спортивного питания</p>
+                    <div class="kpi">@((ViewBag.Manufacturers as IEnumerable<object>)?.Cast<object>().Count() ?? 0)</div>
+                </div>
+            </a>
+
+            <a class="admin-card" asp-controller="AdminCategory" asp-action="Index">
+                <div class="card-content">
+                    <h3>Категории</h3>
+                    <p>Иерархия категорий товаров</p>
+                    <div class="kpi">@((ViewBag.Categories as IEnumerable<object>)?.Cast<object>().Count() ?? 0)</div>
+                </div>
+            </a>
+
+            <a class="admin-card" asp-controller="AdminUser" asp-action="Index">
+                <div class="card-content">
+                    <h3>Пользователи</h3>
+                    <p>Клиенты и администраторы системы</p>
+                    <div class="kpi">@((ViewBag.Users as IEnumerable<object>)?.Cast<object>().Count() ?? 0)</div>
+                </div>
+            </a>
+
+            <a class="admin-card" asp-controller="Admin" asp-action="Orders">
+                <div class="card-content">
+                    <h3>Заказы</h3>
+                    <p>Статусы заказов и доставка</p>
+                    <div class="kpi">@((ViewBag.Orders as IEnumerable<object>)?.Cast<object>().Count() ?? 0)</div>
+                </div>
+            </a>
+
+            <a class="admin-card" asp-controller="Admin" asp-action="Statistics">
+                <div class="card-content">
+                    <h3>Статистика</h3>
+                    <p>Аналитика продаж и эффективности</p>
+                    <div class="kpi">→</div>
+                </div>
+            </a>
+        </div>
+    }
+
+    @* --- РЕЖИМ 2: ТАБЛИЧНЫЙ СПИСОК --- *@
+    @{
+        IEnumerable list = null;
+        Type elemType = null;
+        string controller = null;
+        List<PropertyInfo> props = null;
+        PropertyInfo idProp = null;
+        List<string> searchableProperties = new List<string>();
+
+        if (isListMode)
+        {
+            list = (IEnumerable)Model;
+            elemType = Model.GetType().GetGenericArguments()[0];
+            controller = GetControllerFor(elemType);
+
+            // Поля, которые никогда не показываем в списках
+            var hiddenSensitiveProps = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+        "Password", "PasswordHash", "PasswordSalt", "Hash", "Salt", "Deleted"
+        };
+
+            // Минимальные видимые колонки по типам
+            var visibleColumnsByType = new Dictionary<string, string[]>
+            {
+                // ТОВАРЫ: только самое важное
+                ["Product"] = new[] { "IdProduct", "Name", "CategoryId", "ManufacturerId", "Price", "Quantity", "IsAvailable" },
+
+                // ПРОИЗВОДИТЕЛИ/КАТЕГОРИИ: краткий вид
+                ["Manufacturer"] = new[] { "IdManufacturer", "Name" },
+                ["Category"] = new[] { "IdCategory", "Name" },
+
+                // ПОЛЬЗОВАТЕЛИ: без паролей
+                ["User"] = new[] { "IdUser", "Email", "FirstName", "LastName", "Phone", "RoleId" }
+            };
+
+            // (оставляем как было) поля для поиска
+            var searchFields = new Dictionary<string, string[]>
+            {
+                ["Product"] = new[] { "IdProduct", "Name", "Article", "Description" },
+                ["Manufacturer"] = new[] { "IdManufacturer", "Name", "Description" },
+                ["Category"] = new[] { "IdCategory", "Name", "Description" },
+                ["User"] = new[] { "IdUser", "Email", "FirstName", "LastName", "Phone" }
+            };
+            // доп. скрытые поля только для Product
+            var productHiddenColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+        "Unit", "VolumeOrWeight", "Description", "Image",
+        "CaloriesKcal", "ProteinG", "FatG", "CarbsG"
+        };
+
+
+
+            var preferredOrder = new Dictionary<string, string[]>
+            {
+                ["Product"] = new[] { "IdProduct", "Name", "Article", "CategoryId", "ManufacturerId", "Price", "Quantity", "IsAvailable" },
+                ["Manufacturer"] = new[] { "IdManufacturer", "Name", "Description" },
+                ["Category"] = new[] { "IdCategory", "Name", "Description" },
+                ["User"] = new[] { "IdUser", "Email", "FirstName", "LastName", "Phone", "RoleId" },
+            };
+
+            var allPropsArr = elemType
+                .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Where(p => !hiddenSensitiveProps.Contains(p.Name))
+                .ToArray();
+
+            allPropsArr = allPropsArr.Where(p => !p.Name.Equals("Deleted", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+            if (elemType.Name.Equals("Product", StringComparison.OrdinalIgnoreCase))
+            {
+                allPropsArr = allPropsArr
+                .Where(p => !productHiddenColumns.Contains(p.Name))
+                .ToArray();
+            }
+
+
+            props = new List<PropertyInfo>();
+            var elemName = elemType.Name;
+
+            // если есть преднастройка "минимальных" колонок — используем её
+            if (visibleColumnsByType.TryGetValue(elemName, out var wanted))
+            {
+                foreach (var name in wanted)
+                {
+                    var prop = allPropsArr.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                    if (prop != null && !props.Contains(prop))
+                        props.Add(prop);
+                }
+            }
+            else
+            {
+                // иначе показываем все (кроме скрытых)
+                props.AddRange(allPropsArr);
+            }
+
+            // поля для поиска
+            if (searchFields.ContainsKey(elemName))
+            {
+                searchableProperties.AddRange(searchFields[elemName]);
+            }
+
+            // первая пропертя, начинающаяся на "Id..." — считаем идентификатором
+            foreach (var p in props)
+                if (p.Name.StartsWith("Id", StringComparison.Ordinal))
+                {
+                    idProp = p;
+                    break;
+                }
+
+
+            // Исключаем поле Deleted
+            allPropsArr = allPropsArr.Where(p => !p.Name.Equals("Deleted", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+            if (preferredOrder.ContainsKey(elemName))
+            {
+                var order = preferredOrder[elemName];
+                foreach (var name in order)
+                {
+                    var prop = allPropsArr.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                    if (prop != null && !props.Contains(prop))
+                        props.Add(prop);
+                }
+
+                foreach (var p in allPropsArr)
+                    if (!props.Contains(p))
+                        props.Add(p);
+            }
+            else
+            {
+                props.AddRange(allPropsArr);
+            }
+
+            // Устанавливаем поисковые поля
+            if (searchFields.ContainsKey(elemName))
+            {
+                searchableProperties.AddRange(searchFields[elemName]);
+            }
+
+            foreach (var p in props)
+                if (p.Name.StartsWith("Id", StringComparison.Ordinal)) { idProp = p; break; }
+        }
+    }
+
+    @if (isListMode)
+    {
+        <div class="table-section">
+            <div class="section-header">
+                <h2 class="section-title">@title</h2>
+                <div class="search-container">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Поиск..."
+                           onkeyup="filterTable()" />
+                    <div class="stats-bar">
+                        <span id="recordCount">Всего записей: @(list.Cast<object>().Count())</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="admin-table" id="dataTable">
+                    <thead>
+                        <tr>
+                            @foreach (PropertyInfo p in props)
+                            {
+                                <th>@Nice(p.Name)</th>
+                            }
+                            <th style="width: 200px;">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in list)
+                        {
+                            var idVal = idProp != null ? idProp.GetValue(item) : null;
+                            <tr>
+                                @foreach (PropertyInfo p in props)
+                                {
+                                    var v = p.GetValue(item);
+                                    <td>
+                                        @if (v is bool b)
+                                        {
+                                            <span class="badge @(b ? "badge-success" : "badge-danger")">
+                                                @(b ? "Да" : "Нет")
+                                            </span>
+                                        }
+                                        else if (p.Name.Contains("Price"))
+                                        {
+                                            @($"{(v ?? 0):C}")
+                                        }
+                                        else if (p.Name.EndsWith("Id") && p.Name != "Id" + elemType.Name)
+                                        {
+                                            // Отображаем название связанной сущности вместо ID
+                                            var relatedEntity = GetRelatedEntity(item, p.Name);
+                                            <span class="related-entity">
+                                                @GetRelatedEntityName(relatedEntity)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            @(v?.ToString() ?? "-")
+                                        }
+                                    </td>
+                                }
+                                <td>
+                                    <div class="btn-group">
+                                        @if (!string.Equals(controller, "Admin", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            // === ЛОГИКА ВЫВОДА КНОПОК ===
+                                            bool showEdit = true;
+                                            bool showDelete = true;
+
+                                            bool isUsersList = string.Equals(controller, "AdminUser", StringComparison.OrdinalIgnoreCase)
+                                            || string.Equals(elemType?.Name, "User", StringComparison.OrdinalIgnoreCase);
+
+                                            if (isUsersList)
+                                            {
+                                                // роль пользователя в строке
+                                                var roleEntity = GetRelatedEntity(item, "RoleId");
+                                                var roleName = GetRelatedEntityName(roleEntity);
+                                                bool isCustomerRole = string.Equals(roleName, "Customer", StringComparison.OrdinalIgnoreCase);
+
+                                                // текущий пользователь
+                                                int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var currentUserId);
+                                                int rowUserId = 0;
+                                                try { rowUserId = Convert.ToInt32(idVal); } catch { }
+
+                                                if (isCustomerRole)
+                                                {
+                                                    // Customer нельзя ни редактировать, ни удалять
+                                                    showEdit = false;
+                                                    showDelete = false;
+                                                }
+
+                                                if (rowUserId == currentUserId)
+                                                {
+                                                    // себя нельзя удалять
+                                                    showDelete = false;
+                                                }
+                                            }
+
+                                            // === КНОПКИ ===
+                                            if (showEdit)
+                                            {
+                                                <a class="btn btn-primary"
+                                                   asp-controller="@controller"
+                                                   asp-action="Edit"
+                                                   asp-route-id="@idVal">
+                                                    Редактировать
+                                                </a>
+                                            }
+
+                                            if (showDelete)
+                                            {
+                                                <form asp-controller="@controller"
+                                                      asp-action="Delete"
+                                                      asp-route-id="@idVal"
+                                                      method="post"
+                                                      onsubmit="return confirm('Удалить запись @idVal?');"
+                                                      style="display:inline;">
+                                                    <button class="btn btn-danger" type="submit">Удалить</button>
+                                                </form>
+                                            }
+
+                                            if (!showEdit && !showDelete)
+                                            {
+                                                <span style="color:#666; font-size:.85rem;">Действия недоступны</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span style="color:#666; font-size:.85rem;">(нет действий)</span>
+                                        }
+                                    </div>
+                                </td>
+
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="action-bar">
+                @if (!string.Equals(controller, "Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    <a class="btn btn-primary" asp-controller="@controller" asp-action="Add">
+                        Добавить новую запись
+                    </a>
+                }
+                <a class="btn" asp-controller="Admin" asp-action="Index">
+                    Назад в панель
+                </a>
+            </div>
+        </div>
+
+    }
+</div>
+<script src="~/js/admin.js"></script>

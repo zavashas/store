@@ -1,0 +1,44 @@
+﻿@model APISportFoodStore.Models.Category
+@{
+    var isEdit = Model?.IdCategory != null && Model.IdCategory > 0;
+    ViewData["Title"] = isEdit ? "Редактирование категории" : "Добавление категории";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4">@ViewData["Title"]</h2>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            Пожалуйста, исправьте ошибки ниже.
+        </div>
+    }
+
+    <form asp-action="@(isEdit ? "Edit" : "Add")"
+          asp-controller="AdminCategory"
+          method="post" class="needs-validation">
+
+        @if (isEdit)
+        {
+            <input type="hidden" asp-for="IdCategory" />
+        }
+
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Название категории</label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                @(isEdit ? "Сохранить изменения" : "Добавить")
+            </button>
+            <a asp-action="Index" asp-controller="AdminCategory" class="btn btn-secondary">Назад</a>
+        </div>
+    </form>
+</div>

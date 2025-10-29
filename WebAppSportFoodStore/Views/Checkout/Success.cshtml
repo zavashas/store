@@ -1,0 +1,15 @@
+﻿@model WebAppSportFoodStore.Controllers.OrderSuccessVm
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = "Заказ оформлен";
+}
+<div class="container py-5 text-center">
+    <div class="display-6 mb-3">Спасибо! 🎉</div>
+    @if (Model.OrderId > 0)
+    {
+        <p class="lead">Ваш заказ <strong>#@Model.OrderId</strong> успешно оформлен.</p>
+    }
+    <p class="mb-4">Сумма к оплате: <strong>@Model.Total.ToString("0.##") ₽</strong></p>
+    <a class="btn btn-primary rounded-pill px-4" href="/">На главную</a>
+    <a class="btn btn-outline-secondary rounded-pill px-4 ms-2" href="/OrderHistory">Мои заказы</a>
+</div>

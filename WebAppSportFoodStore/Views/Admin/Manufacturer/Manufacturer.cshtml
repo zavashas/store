@@ -1,0 +1,42 @@
+﻿@model APISportFoodStore.Models.Manufacturer
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var isEdit = Model?.IdManufacturer != null && Model.IdManufacturer > 0;
+    ViewData["Title"] = isEdit ? "Редактирование производителя" : "Добавление производителя";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4">@ViewData["Title"]</h2>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">Проверьте правильность заполнения формы.</div>
+    }
+
+    <form asp-action="@(isEdit ? "Edit" : "Add")"
+          asp-controller="AdminManufacturer"
+          method="post">
+
+        @if (isEdit)
+        {
+            <input type="hidden" asp-for="IdManufacturer" />
+        }
+
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Название производителя</label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                @(isEdit ? "Сохранить" : "Добавить")
+            </button>
+            <a asp-action="Index" asp-controller="AdminManufacturer" class="btn btn-secondary">Назад</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

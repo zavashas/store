@@ -1,0 +1,56 @@
+﻿@model APISportFoodStore.Models.User
+
+@{
+    ViewData["Title"] = "Регистрация";
+}
+
+<h2>Регистрация</h2>
+
+<form asp-action="Register" method="post">
+    <div class="form-group">
+        <label>Фамилия</label>
+        <input asp-for="Surname" class="form-control" required pattern="[А-Яа-яЁёA-Za-z\s\-]+" title="Фамилия должна содержать только буквы" />
+    </div>
+    <div class="form-group">
+        <label>Имя</label>
+        <input asp-for="Name" class="form-control" required pattern="[А-Яа-яЁёA-Za-z\s\-]+" title="Имя должно содержать только буквы" />
+    </div>
+    <div class="form-group">
+        <label>Отчество</label>
+        <input asp-for="MiddleName" class="form-control" pattern="[А-Яа-яЁёA-Za-z\s\-]*" title="Отчество должно содержать только буквы" />
+    </div>
+
+    <div class="form-group">
+        <label>Email</label>
+        <input asp-for="Email" class="form-control" type="email" required />
+    </div>
+    <div class="form-group">
+        <label>Телефон</label>
+        <input asp-for="Phone" class="form-control" required pattern="^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$" title="Введите корректный номер" />
+    </div>
+
+    <div class="form-group">
+        <label>Пароль</label>
+        <input asp-for="PasswordHash" type="password" class="form-control" required />
+    </div>
+    <div class="form-group">
+        <label>Повторите пароль</label>
+        <input type="password" name="ConfirmPassword" class="form-control" required />
+    </div>
+
+    <button type="submit" class="btn btn-success mt-3">Зарегистрироваться</button>
+    
+</form>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger mt-3">
+        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <p>@error.ErrorMessage</p>
+        }
+    </div>
+}
+
+
+<p class="mt-3">Уже есть аккаунт? <a asp-action="Authorization">Войти</a></p>

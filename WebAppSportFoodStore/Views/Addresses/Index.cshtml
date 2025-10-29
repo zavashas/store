@@ -1,0 +1,67 @@
+﻿@model List<APISportFoodStore.Models.UserAddress>
+@{
+    ViewData["Title"] = "Адреса";
+}
+
+<div class="container py-5">
+    <h1 class="h3 fw-bold mb-4">Адреса</h1>
+
+    @if (TempData["Ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
+    {
+        <div class="alert alert-success">@ok</div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="text-muted">Всего: @Model.Count</div>
+        <a class="btn btn-primary rounded-pill px-4" asp-action="Edit">Добавить адрес</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card border-0 bg-light rounded-4 p-5 text-center">
+            <div class="mb-3"><i class="fas fa-map-marker-alt" style="font-size: 3rem;"></i></div>
+            <div class="lead mb-0">Пока нет сохранённых адресов</div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var a in Model)
+            {
+                <div class="col-md-6">
+                    <div class="card rounded-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="fw-semibold">Адрес</div>
+                                    <div class="text-muted">
+                                        @a.City, @a.Street, д. @a.House
+                                        @if (!string.IsNullOrWhiteSpace(a.Apartament))
+                                        {
+                                            @: , кв. @a.Apartament
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(a.CourierComment))
+                                    {
+                                        <div class="small text-muted mt-1">@a.CourierComment</div>
+                                    }
+                                </div>
+                                <div class="text-nowrap">
+                                    <a class="btn btn-sm btn-outline-primary rounded-pill" asp-action="Edit" asp-route-id="@(a.IdAddress ?? 0)">Изменить</a>
+                                    <form asp-action="Delete" method="post" class="d-inline">
+                                        <input type="hidden" name="id" value="@(a.IdAddress ?? 0)" />
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill"
+                                                onclick="return confirm('Удалить адрес?')">
+                                            Удалить
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

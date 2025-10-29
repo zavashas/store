@@ -1,0 +1,249 @@
+﻿@model WebAppSportFoodStore.Models.AdminStatsVm
+@{
+    ViewData["Title"] = "Статистика";
+    Layout = "_Layout";
+    var ru = System.Globalization.CultureInfo.GetCultureInfo("ru-RU");
+
+    // Get query parameters safely
+    var fromDate = Context.Request.Query["from"].FirstOrDefault();
+    var toDate = Context.Request.Query["to"].FirstOrDefault();
+}
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<style>
+    .stats-wrap {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px
+    }
+
+    .kpi-cards {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 16px
+    }
+
+    .kpi {
+        background: #1f2937;
+        color: #fff;
+        border-radius: 14px;
+        padding: 16px
+    }
+
+        .kpi .val {
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 6px
+        }
+
+    .chart-card {
+        background: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 14px;
+        padding: 16px
+    }
+
+        .chart-card h3 {
+            color: #e5e7eb;
+            margin: 0 0 10px 0
+        }
+
+    .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 16px
+    }
+
+        .toolbar input, .toolbar select {
+            height: 36px;
+            padding: 0 10px;
+            border-radius: 10px;
+            border: 1px solid #374151;
+            background: #111827;
+            color: #e5e7eb
+        }
+
+    .btn {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 8px 14px;
+        cursor: pointer
+    }
+
+        .btn.secondary {
+            background: #374151
+        }
+
+    @@media (max-width: 900px) {
+        .kpi-cards {
+            grid-template-columns: 1fr
+        }
+    }
+</style>
+
+<div id="stats-page" class="stats-wrap">
+    <div class="toolbar">
+        <form method="get" asp-action="Statistics" class="toolbar" style="flex-wrap:wrap">
+            <label>
+                С:
+                <input type="date" name="from" value="@fromDate" />
+            </label>
+            <label>
+                По:
+                <input type="date" name="to" value="@toDate" />
+            </label>
+            <label>
+                Группировка:
+                <select name="groupBy">
+                    <option value="day" selected="@(Model.GroupBy == "day")">По дням</option>
+                    <option value="month" selected="@(Model.GroupBy == "month")">По месяцам</option>
+                </select>
+            </label>
+            <label>
+                Топ N товаров:
+                <input type="number" name="topN" value="@Model.TopN" min="3" max="50" />
+            </label>
+            <button class="btn" type="submit">Обновить</button>
+            <button class="btn secondary" type="button" id="exportPdfBtn">Экспорт в PDF</button>
+            <a class="btn secondary" asp-controller="Admin" asp-action="Index">Назад</a>
+        </form>
+    </div>
+
+    <div class="kpi-cards">
+        <div class="kpi">
+            <div>Выручка (@Model.PeriodTitle)</div>
+            <div class="val">@Model.TotalRevenue.ToString("C0", ru)</div>
+        </div>
+        <div class="kpi">
+            <div>Заказы</div>
+            <div class="val">@Model.TotalOrders</div>
+        </div>
+        <div class="kpi">
+            <div>Уникальные клиенты</div>
+            <div class="val">@Model.UniqueCustomers</div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3>Динамика заказов (@Model.GroupBy)</h3>
+        <canvas id="ordersChart" height="120"></canvas>
+    </div>
+
+    <div class="chart-card">
+        <h3>Выручка (@Model.GroupBy)</h3>
+        <canvas id="revenueChart" height="120"></canvas>
+    </div>
+
+    <div class="chart-card">
+        <h3>Топ популярных товаров (кол-во)</h3>
+        <canvas id="topProductsChart" height="140"></canvas>
+    </div>
+</div>
+
+<script>
+    (() => {
+      const ruCurrency = new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB'});
+
+      // Данные из модели
+      const ordersLabels  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.OrdersLabels));
+      const ordersCounts  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.OrdersCounts));
+      const revenueLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueLabels));
+      const revenueValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueValues));
+      const topLabels     = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TopProductsLabels));
+      const topQty        = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TopProductsQty));
+
+      // Charts
+      const makeLine = (ctx, labels, data, titleForTooltip) => new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [{ data, pointRadius: 2, tension: .2 }]},
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => titleForTooltip === 'revenue'
+                  ? ruCurrency.format(ctx.parsed.y || 0)
+                  : (ctx.parsed.y || 0)
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }},
+            y: { beginAtZero: true, ticks: { callback: v => titleForTooltip==='revenue' ? ruCurrency.format(v) : v } }
+          }
+        }
+      });
+
+      const makeBar = (ctx, labels, data) => new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ data }]},
+        options: {
+          indexAxis: 'y',
+          plugins: { legend: { display:false } },
+          scales: { x: { beginAtZero:true } }
+        }
+      });
+
+      const ordersChart  = makeLine(document.getElementById('ordersChart'), ordersLabels, ordersCounts, 'orders');
+      const revenueChart = makeLine(document.getElementById('revenueChart'), revenueLabels, revenueValues, 'revenue');
+      const topChart     = makeBar(document.getElementById('topProductsChart'), topLabels, topQty);
+
+      // Экспорт в PDF всей секции #stats-page
+      document.getElementById('exportPdfBtn').addEventListener('click', async () => {
+        const { jsPDF } = window.jspdf;
+
+        // Убедимся, что чарты дорисованы
+        await Promise.all([ordersChart, revenueChart, topChart].map(ch => ch.resize()));
+
+        // Рендерим всю страницу с графиками в картинку
+        const target = document.getElementById('stats-page');
+        const canvas = await html2canvas(target, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+        const imgData = canvas.toDataURL('image/png');
+
+        const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        const pageWidth  = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        // Вписываем изображение пропорционально (портрет A4)
+        const imgWidth = pageWidth - 40; // поля
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+
+        let y = 20;
+        if (imgHeight < pageHeight - 40) {
+            pdf.addImage(imgData, 'PNG', 20, y, imgWidth, imgHeight, undefined, 'FAST');
+        } else {
+            // Разбивка на страницы
+            let remainingHeight = imgHeight;
+            let position = 20;
+            let srcY = 0;
+            const sliceHeightPx = canvas.width * (pageHeight - 40) / imgWidth;
+
+            while (remainingHeight > 0) {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = Math.min(sliceHeightPx, canvas.height - srcY);
+                const tctx = tempCanvas.getContext('2d');
+                tctx.drawImage(canvas, 0, srcY, canvas.width, tempCanvas.height, 0, 0, tempCanvas.width, tempCanvas.height);
+
+                const sliceData = tempCanvas.toDataURL('image/png');
+                if (srcY > 0) pdf.addPage();
+                pdf.addImage(sliceData, 'PNG', 20, 20, imgWidth, (pageHeight - 40), undefined, 'FAST');
+
+                srcY += tempCanvas.height;
+                remainingHeight -= (pageHeight - 40);
+            }
+        }
+
+        const fileName = `admin-stats-${new Date().toISOString().slice(0,10)}.pdf`;
+        pdf.save(fileName);
+      });
+    })();
+</script>

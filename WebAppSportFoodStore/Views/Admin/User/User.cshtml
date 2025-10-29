@@ -1,0 +1,142 @@
+﻿@using APISportFoodStore.Models
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model User
+
+@{
+    ViewData["Title"] = (Model?.IdUser ?? 0) > 0 ? "Редактирование пользователя" : "Добавление пользователя";
+    var roles = ViewBag.Roles as List<Role> ?? new();
+    var isEdit = (Model?.IdUser ?? 0) > 0;
+
+    string currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0";
+    bool isSelf = int.TryParse(currentUserId, out var meId) && meId == (Model?.IdUser ?? 0);
+
+    var currentRole = roles.FirstOrDefault(r => r.IdRole == Model?.RoleId);
+    bool isCustomer = string.Equals(currentRole?.Name, "Customer", StringComparison.OrdinalIgnoreCase);
+
+    var roleItems = new SelectList(roles, nameof(Role.IdRole), nameof(Role.Name), Model?.RoleId);
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light">
+                    <h5 class="m-0">@ViewData["Title"]</h5>
+                </div>
+
+                <div class="card-body">
+                    @if (TempData["UserSuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success">@TempData["UserSuccessMessage"]</div>
+                    }
+                    @if (TempData["UserErrorMessage"] != null)
+                    {
+                        <div class="alert alert-danger">@TempData["UserErrorMessage"]</div>
+                    }
+
+                    @if (isCustomer)
+                    {
+                        <div class="alert alert-warning mb-3">
+                            Пользователя с ролью <strong>Customer</strong> редактировать и удалять запрещено.
+                        </div>
+                    }
+                    @if (isSelf)
+                    {
+                        <div class="alert alert-info mb-3">
+                            Нельзя удалить свой аккаунт из админки.
+                        </div>
+                    }
+
+                    <form asp-action="@(isEdit ? "Edit" : "Add")" method="post" class="needs-validation" novalidate>
+                        @if (isEdit)
+                        {
+                            <input type="hidden" name="id" value="@Model.IdUser" />
+                            <input asp-for="IdUser" type="hidden" />
+                        }
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input asp-for="Email" class="form-control" placeholder="user@example.com"
+                                       readonly="@(isCustomer ? "readonly" : null)" />
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Телефон</label>
+                                <input asp-for="Phone" class="form-control" placeholder="+40 ..."
+                                       readonly="@(isCustomer ? "readonly" : null)" />
+                                <span asp-validation-for="Phone" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Фамилия</label>
+                                <input asp-for="Surname" class="form-control"
+                                       readonly="@(isCustomer ? "readonly" : null)" />
+                                <span asp-validation-for="Surname" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Имя</label>
+                                <input asp-for="Name" class="form-control"
+                                       readonly="@(isCustomer ? "readonly" : null)" />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Отчество</label>
+                                <input asp-for="MiddleName" class="form-control"
+                                       readonly="@(isCustomer ? "readonly" : null)" />
+                                <span asp-validation-for="MiddleName" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Роль</label>
+                                <select asp-for="RoleId" asp-items="roleItems" class="form-select"
+                                        disabled="@(isCustomer ? "disabled" : null)"></select>
+                                <span asp-validation-for="RoleId" class="text-danger"></span>
+                                @if (isCustomer)
+                                {
+                                    <input type="hidden" name="RoleId" value="@Model.RoleId" />
+                                }
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Пароль (оставьте пустым, чтобы не менять)</label>
+                                <input type="password" name="PasswordHash" class="form-control" placeholder="Новый пароль"
+                                       disabled="@(isCustomer ? "disabled" : null)" />
+                            </div>
+
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <a asp-controller="Admin" asp-action="Index" class="btn btn-outline-secondary">← Назад</a>
+                            <button type="submit" class="btn btn-primary"
+                                    disabled="@(isCustomer ? "disabled" : null)">
+                                Сохранить
+                            </button>
+                        </div>
+                    </form>
+
+                    @if (isEdit)
+                    {
+                        <div class="d-flex gap-2 mt-3">
+                            <form asp-action="Delete" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@Model.IdUser" />
+                                <button type="submit" class="btn btn-danger"
+                                        disabled="@(isCustomer || isSelf ? "disabled" : null)"
+                                        title="@(isSelf ? "Нельзя удалить самого себя" : (isCustomer ? "Нельзя удалять Customer" : "Удалить пользователя"))">
+                                    Удалить
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

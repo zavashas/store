@@ -1,0 +1,185 @@
+﻿@using System.Globalization
+@using APISportFoodStore.Models
+@model ProductDto
+
+@{
+    ViewData["Title"] = Model?.Name ?? "Товар";
+    var ru = new CultureInfo("ru-RU");
+
+    string name = Model?.Name ?? "Без названия";
+    string brand = Model?.ManufacturerName ?? "";
+    string vol = (Model?.VolumeOrWeight ?? 0m) > 0 ? $"{Model!.VolumeOrWeight:0.##} {Model!.Unit}" : (Model?.Unit ?? "");
+    string? article = Model?.Article;
+    string price = (Model?.Price ?? 0m).ToString("C0", ru);
+
+    var raw = string.IsNullOrWhiteSpace(Model?.Image) ? "images/placeholder-product.webp" : Model!.Image!.TrimStart('~', '/');
+    string imgUrl = Url.Content("~/" + raw);
+
+    bool hasNutrition = (Model?.CaloriesKcal ?? 0) > 0
+                     || (Model?.ProteinG ?? 0) > 0
+                     || (Model?.FatG ?? 0) > 0
+                     || (Model?.CarbsG ?? 0) > 0;
+
+    var inCartSet = ViewBag.CartProductIds as HashSet<int>;
+    bool inCart = (inCartSet != null && (Model?.IdProduct ?? 0) > 0)
+        ? inCartSet.Contains(Model!.IdProduct)
+        : false;
+
+    var addUrl = Url.Action("Add", "Cart");
+
+    var favSet = ViewBag.FavoriteProductIds as HashSet<int>;
+    bool inFav = favSet?.Contains(Model.IdProduct) == true;
+}
+
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Catalog" asp-action="Index">Каталог</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@name</li>
+        </ol>
+    </nav>
+
+    <div class="product-hero">
+        <div class="row g-4 align-items-start">
+            <div class="col-12 col-lg-5">
+                <div class="ratio ratio-1x1 product-media position-relative">
+                    <img src="@imgUrl" alt="@name" class="w-100 h-100" loading="lazy" decoding="async" />
+                    <button class="btn-heart position-absolute top-2 end-2 js-fav-toggle @(inFav ? "active" : "")"
+                            data-product-id="@Model.IdProduct"
+                            aria-pressed="@(inFav ? "true" : "false")"
+                            title="В избранное">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-8.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+                        </svg>
+                    </button>
+
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-7">
+                @if (!string.IsNullOrWhiteSpace(brand))
+                {
+                    <div class="text-muted small mb-1">@brand</div>
+                }
+                <h1 class="h4 mb-2">@name</h1>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <div class="price-tag me-2">@price</div>
+                    @if (!string.IsNullOrWhiteSpace(vol))
+                    {
+                        <span class="badge badge-soft">@vol</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(article))
+                    {
+                        <span class="badge badge-article">Art: @article</span>
+                    }
+                </div>
+
+                @if (hasNutrition)
+                {
+                    <div class="mb-3 d-flex flex-wrap gap-2">
+                        @if ((Model?.CaloriesKcal ?? 0) > 0)
+                        {
+                            <span class="nutr-chip">Ккал: @Model!.CaloriesKcal</span>
+                        }
+                        @if ((Model?.ProteinG ?? 0) > 0)
+                        {
+                            <span class="nutr-chip">Белки: @Model!.ProteinG г</span>
+                        }
+                        @if ((Model?.FatG ?? 0) > 0)
+                        {
+                            <span class="nutr-chip">Жиры: @Model!.FatG г</span>
+                        }
+                        @if ((Model?.CarbsG ?? 0) > 0)
+                        {
+                            <span class="nutr-chip">Углеводы: @Model!.CarbsG г</span>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Model?.Description))
+                {
+                    <div class="mb-4 text-body-secondary" style="white-space:pre-line;">@Model!.Description</div>
+                }
+
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        @if (inCart)
+                        {
+                            <button type="button" class="btn btn-outline-success disabled" disabled>
+                                В корзине
+                            </button>
+                        }
+                        else if (addUrl != null && (Model?.IdProduct ?? 0) > 0)
+                        {
+                            <form method="post" action="@addUrl" class="add-to-cart-form d-flex align-items-center gap-2">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="productId" value="@Model!.IdProduct" />
+                                <input type="hidden" name="quantity" value="1" />
+                                <button type="submit" class="btn btn-primary">В корзину</button>
+                            </form>
+                        }
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @{
+        var related = ViewBag.Related as IEnumerable<ProductDto>;
+        if (related != null && related.Any())
+        {
+            <hr class="my-5" />
+            <h2 class="h5 mb-3">Похожие товары</h2>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3">
+                @foreach (var r in related)
+                {
+                    <div class="col">
+                        @await Html.PartialAsync("~/Views/Shared/ProductCard.cshtml", r)
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('click', function (e) {
+            const fav = e.target.closest('.js-fav-toggle');
+            if (!fav) return;
+            e.preventDefault();
+            fav.classList.toggle('active');
+        });
+    </script>
+
+    <script>
+        document.addEventListener('click', async (e) => {
+          const btn = e.target.closest('.js-fav-toggle');
+          if (!btn) return;
+
+          e.preventDefault();
+          const productId = btn.dataset.productId;
+          if (!productId) return;
+
+          const form = new FormData();
+          form.append('productId', productId);
+
+          const resp = await fetch('/Favorites/Toggle', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: form
+          });
+
+          if (resp.status === 401) { window.location.href = '/Account/Authorization'; return; }
+
+          const data = await resp.json();
+          const active = !!data.inFavorites;
+          btn.classList.toggle('active', active);
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    </script>
+
+}

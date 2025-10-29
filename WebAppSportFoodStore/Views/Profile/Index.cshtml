@@ -1,0 +1,94 @@
+﻿@model WebAppSportFoodStore.Controllers.ProfileVm
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = "Профиль";
+}
+
+<div class="container py-5">
+    <h1 class="h3 fw-bold mb-4">Профиль</h1>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="alert alert-danger">@Model.Error</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Success))
+    {
+        <div class="alert alert-success">@Model.Success</div>
+    }
+
+    <form asp-action="Index" method="post" class="row g-3">
+        <input type="hidden" asp-for="IdUser" />
+
+        <div class="col-md-4">
+            <label class="form-label">Фамилия</label>
+            <input class="form-control" asp-for="Surname" required />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Имя</label>
+            <input class="form-control" asp-for="Name" required />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Отчество</label>
+            <input class="form-control" asp-for="MiddleName" />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input class="form-control" asp-for="Email" type="email" required />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Телефон</label>
+            <input class="form-control" asp-for="Phone" type="tel" />
+        </div>
+
+        <div class="col-12">
+            <div class="card border-0 bg-light rounded-4 p-3">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label">Введите старый пароль</label>
+                        <input class="form-control" asp-for="OldPassword" type="password" placeholder="Только если меняете пароль" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Введите новый пароль</label>
+                        <input class="form-control" asp-for="NewPassword" type="password" placeholder="Не менее 6 символов" />
+                    </div>
+                    <div class="col-12">
+                        <small class="text-muted">
+                            Чтобы сменить пароль, заполните оба поля. Старый проверим, новый сохраним.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 d-flex gap-2">
+            <button class="btn btn-primary rounded-pill px-4" type="submit">
+                Сохранить изменения
+            </button>
+            <a class="btn btn-outline-secondary rounded-pill px-4" href="/">
+                Отмена
+            </a>
+        </div>
+    </form>
+
+    <hr class="my-5" />
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <a class="nav-link" href="@Url.Action("Index", "OrderHistory")">
+                <div class="card-body">
+                    <div class="h5 mb-2">История заказов</div>
+                    <p class="text-muted mb-0">Список ваших заказов и статусы.</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a class="card h-100 text-decoration-none" href="/addresses">
+                <div class="card-body">
+                    <div class="h5 mb-2">Адреса</div>
+                    <p class="text-muted mb-0">Адреса доставки и комментарии курьеру.</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>

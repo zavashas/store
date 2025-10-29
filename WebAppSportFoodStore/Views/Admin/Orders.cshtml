@@ -1,0 +1,331 @@
+﻿@using APISportFoodStore.Models
+@model List<APISportFoodStore.Models.Order>
+@{
+    ViewData["Title"] = "Управление заказами";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Управление заказами</h1>
+        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+             Назад 
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Фильтры и поиск -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" name="search" class="form-control" placeholder="Поиск по ID заказа, пользователю..."
+                           value="@ViewBag.Search">
+                </div>
+                <div class="col-md-4">
+                    <select name="statusId" class="form-select">
+                        <option value="">Все статусы</option>
+                        @foreach (var status in ViewBag.Statuses)
+                        {
+                            <option value="@status.IdOrderStatus"
+                                    selected="@(ViewBag.SelectedStatusId?.ToString() == status.IdOrderStatus?.ToString())">
+                                @status.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i> Фильтровать
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Таблица заказов -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Пользователь</th>
+                            <th>Дата заказа</th>
+                            <th>Сумма</th>
+                            <th>Дата доставки</th>
+                            <th>Время доставки</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model)
+                        {
+                            var user = ((List<User>)ViewBag.Users).FirstOrDefault(u => u.IdUser == order.UserId);
+                            var status = ((List<OrderStatus>)ViewBag.Statuses).FirstOrDefault(s => s.IdOrderStatus == order.OrderStatusId);
+                            var slot = ((List<DeliveryTimeSlot>)ViewBag.DeliverySlots).FirstOrDefault(s => s.IdDeliverySlot == order.DeliverySlotId);
+
+                            <tr>
+                                <td>
+                                    <strong>#@order.IdOrder</strong>
+                                    <br>
+                                    <small class="text-muted">User: @order.UserId</small>
+                                    <button class="btn btn-sm btn-outline-info ms-1"
+                                            onclick="showOrderDetails(@order.IdOrder)"
+                                            title="Детали заказа">
+                                        <i class="bi bi-list"></i>
+                                    </button>
+                                </td>
+                                <td>@(user?.Name ?? "Пользователь #" + order.UserId)</td>
+                                <td>@order.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>@order.TotalAmount.ToString("N2") ₽</td>
+                                <td>
+                                    <input type="date"
+                                           class="form-control form-control-sm delivery-date"
+                                           data-order-id="@order.IdOrder"
+                                           value="@order.DeliveryDate.ToString("yyyy-MM-dd")"
+                                           style="min-width: 120px;">
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm delivery-slot"
+                                            data-order-id="@order.IdOrder"
+                                            style="min-width: 140px;">
+                                        <option value="">Выберите время</option>
+                                        @foreach (var deliverySlot in ViewBag.DeliverySlots)
+                                        {
+                                            <option value="@deliverySlot.IdDeliverySlot"
+                                                    selected="@(deliverySlot.IdDeliverySlot == order.DeliverySlotId)">
+                                                @deliverySlot.TimeRange
+                                            </option>
+                                        }
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm order-status"
+                                            data-order-id="@order.IdOrder"
+                                            style="min-width: 150px;">
+                                        <option value="">Выберите статус</option>
+                                        @foreach (var orderStatus in ViewBag.Statuses)
+                                        {
+                                            <option value="@orderStatus.IdOrderStatus"
+                                                    selected="@(orderStatus.IdOrderStatus == order.OrderStatusId)">
+                                                @orderStatus.Name
+                                            </option>
+                                        }
+                                    </select>
+                                </td>
+                                <td>
+                                    <button class="btn btn-success btn-sm save-btn"
+                                            data-order-id="@order.IdOrder"
+                                            title="Сохранить изменения">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (!Model.Any())
+                {
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox display-1 text-muted"></i>
+                        <p class="text-muted mt-3">Заказы не найдены</p>
+                        <a href="@Url.Action("Orders")" class="btn btn-primary">Обновить</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для деталей заказа -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Детали заказа #<span id="modalOrderId"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="orderDetailsContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Функция для показа деталей заказа
+        function showOrderDetails(orderId) {
+            $('#modalOrderId').text(orderId);
+            $('#orderDetailsContent').html(`
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            `);
+
+            $.get(`/Admin/GetOrderDetails?orderId=${orderId}`, function(data) {
+                if (data.length > 0) {
+                    let html = `
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Товар</th>
+                                        <th class="text-end">Кол-во</th>
+                                        <th class="text-end">Цена</th>
+                                        <th class="text-end">Сумма</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+
+                    let total = 0;
+                    data.forEach(item => {
+                        total += item.subtotal;
+                        html += `
+                            <tr>
+                                <td>${item.productName}</td>
+                                <td class="text-end">${item.quantity}</td>
+                                <td class="text-end">${item.price.toFixed(2)} ₽</td>
+                                <td class="text-end">${item.subtotal.toFixed(2)} ₽</td>
+                            </tr>`;
+                    });
+
+                    html += `
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <th colspan="3" class="text-end">Итого:</th>
+                                        <th class="text-end">${total.toFixed(2)} ₽</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>`;
+                    $('#orderDetailsContent').html(html);
+                } else {
+                    $('#orderDetailsContent').html('<p class="text-muted">Детали заказа не найдены</p>');
+                }
+            }).fail(function(xhr) {
+                console.error('Error loading order details:', xhr);
+                $('#orderDetailsContent').html('<p class="text-danger">Ошибка загрузки деталей заказа: ' + xhr.status + '</p>');
+            });
+
+            new bootstrap.Modal(document.getElementById('orderDetailsModal')).show();
+        }
+
+        // Обработка сохранения изменений
+        $(document).ready(function() {
+            $('.save-btn').on('click', function() {
+                const orderId = $(this).data('order-id');
+                const deliveryDate = $(`.delivery-date[data-order-id="${orderId}"]`).val();
+                const deliverySlotId = $(`.delivery-slot[data-order-id="${orderId}"]`).val();
+                const statusId = $(`.order-status[data-order-id="${orderId}"]`).val();
+
+                console.log('Saving order:', { orderId, deliveryDate, deliverySlotId, statusId });
+
+                // Валидация
+                if (!deliveryDate) {
+                    alert('Пожалуйста, выберите дату доставки');
+                    return;
+                }
+
+                if (!deliverySlotId) {
+                    alert('Пожалуйста, выберите время доставки');
+                    return;
+                }
+
+                if (!statusId) {
+                    alert('Пожалуйста, выберите статус заказа');
+                    return;
+                }
+
+                // Показываем индикатор загрузки
+                const saveBtn = $(this);
+                const originalHtml = saveBtn.html();
+                saveBtn.html('<span class="spinner-border spinner-border-sm" role="status"></span>');
+                saveBtn.prop('disabled', true);
+
+                // Отправка данных с обработкой ошибок
+                $.ajax({
+                    url: '/Admin/UpdateOrder',
+                    type: 'POST',
+                    data: {
+                        id: orderId,
+                        statusId: statusId,
+                        deliveryDate: deliveryDate,
+                        deliverySlotId: deliverySlotId
+                    },
+                    success: function(response) {
+                        console.log('Order updated successfully');
+                        // Показываем сообщение об успехе
+                        showToast('Изменения сохранены успешно', 'success');
+                        // Обновляем кнопку
+                        setTimeout(() => {
+                            saveBtn.html('<i class="bi bi-check-lg"></i>');
+                            saveBtn.removeClass('btn-warning').addClass('btn-success');
+                            saveBtn.prop('disabled', false);
+                        }, 1000);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error updating order:', xhr.responseText);
+                        let errorMessage = 'Ошибка при сохранении изменений';
+
+                        if (xhr.status === 404) {
+                            errorMessage = 'Заказ не найден (ошибка 404). Проверьте ID заказа.';
+                        } else if (xhr.status === 400) {
+                            errorMessage = 'Неверные данные для обновления: ' + xhr.responseText;
+                        } else if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage = xhr.responseJSON.error;
+                        }
+
+                        alert('Ошибка: ' + errorMessage);
+                        saveBtn.html(originalHtml);
+                        saveBtn.prop('disabled', false);
+                    }
+                });
+            });
+
+            // Функция для показа уведомлений
+            function showToast(message, type = 'info') {
+                const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+                const alertHtml = `
+                    <div class="alert ${alertClass} alert-dismissible fade show position-fixed"
+                         style="top: 20px; right: 20px; z-index: 1060; min-width: 300px;">
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                $('body').append(alertHtml);
+
+                setTimeout(() => {
+                    $('.alert').alert('close');
+                }, 3000);
+            }
+        });
+    </script>
+}

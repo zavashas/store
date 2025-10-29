@@ -1,0 +1,41 @@
+﻿@* _AddAddressModal.cshtml *@
+@model int
+<div class="modal fade" id="addAddressModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="/UserAddress/Add">
+                <input type="hidden" name="UserId" value="@Model" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Новый адрес</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Город</label>
+                        <input type="text" name="City" class="form-control" required pattern="[A-Za-zА-Яа-яЁё\s\-]+" title="Введите корректный город" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Улица</label>
+                        <input type="text" name="Street" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label>Дом</label>
+                        <input type="text" name="House" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label>Квартира</label>
+                        <input type="text" name="Apartment" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Комментарий курьеру (необязательно)</label>
+                        <input type="text" name="CourierComment" class="form-control" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

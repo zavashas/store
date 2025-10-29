@@ -1,0 +1,69 @@
+﻿@* @model APICosmeticStore.Models.User
+
+<h2>Профиль</h2>
+@if (TempData["ProfileError"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ProfileError"]
+    </div>
+}
+
+@if (TempData["ProfileSuccess"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["ProfileSuccess"]
+    </div>
+}
+
+
+<form asp-action="Profile" method="post" class="row g-3">
+    <input type="hidden" asp-for="IdUser" />
+
+    <div class="col-md-6">
+        <label asp-for="Surname" class="form-label">Фамилия</label>
+        <input asp-for="Surname" class="form-control" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Name" class="form-label">Имя</label>
+        <input asp-for="Name" class="form-control" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="MiddleName" class="form-label">Отчество</label>
+        <input asp-for="MiddleName" class="form-control" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Email" class="form-label">Email</label>
+        <input asp-for="Email" class="form-control" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Phone" class="form-label">Телефон</label>
+        <input asp-for="Phone" class="form-control" />
+    </div>
+
+    <div class="col-12">
+        <label class="form-label">Текущий пароль (если хотите сменить)</label>
+        <input type="password" name="oldPassword" class="form-control" />
+    </div>
+    <div class="col-12">
+        <label class="form-label">Новый пароль</label>
+        <input type="password" name="newPassword" class="form-control" />
+    </div>
+
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+    </div>
+</form>
+
+<hr />
+
+
+
+<!-- Заказы -->
+<div>
+    <h4>История заказов</h4>
+    <a class="btn btn-outline-success btn-sm" href="@Url.Action("Index", "OrderHistory")">
+        Посмотреть историю заказов
+    </a>
+</div>
+
+ *@

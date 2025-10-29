@@ -1,0 +1,118 @@
+﻿@model APISportFoodStore.Models.Product
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var isEdit = Model?.IdProduct != null && Model.IdProduct > 0;
+    ViewData["Title"] = isEdit ? "Редактирование товара" : "Добавление товара";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4">@ViewData["Title"]</h2>
+
+    <form asp-action="@(isEdit ? "Update" : "Add")"
+          asp-controller="AdminProduct"
+          method="post"
+          enctype="multipart/form-data">
+
+        @if (isEdit) { <input type="hidden" asp-for="IdProduct" /> }
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="mb-3">
+                    <label asp-for="Name" class="form-label">Название</label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="CategoryId" class="form-label">Категория</label>
+                        <select asp-for="CategoryId" class="form-select"
+                                asp-items="@(new SelectList(ViewBag.Categories, "IdCategory", "Name"))">
+                            <option value="">-- выберите категорию --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="ManufacturerId" class="form-label">Производитель</label>
+                        <select asp-for="ManufacturerId" class="form-select"
+                                asp-items="@(new SelectList(ViewBag.Manufacturers, "IdManufacturer", "Name"))">
+                            <option value="">-- выберите производителя --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Unit" class="form-label">Ед. изм.</label>
+                        <select asp-for="Unit" class="form-select"
+                                asp-items="@(ViewBag.UnitOptions as IEnumerable<SelectListItem>)">
+                            <option value="">-- выберите --</option>
+                        </select>
+                        <span asp-validation-for="Unit" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="VolumeOrWeight" class="form-label">Вес/Объём</label>
+                        <input asp-for="VolumeOrWeight" type="number" step="0.01" class="form-control" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Price" class="form-label">Цена</label>
+                        <input asp-for="Price" type="number" step="0.01" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Quantity" class="form-label">Кол-во</label>
+                        <input asp-for="Quantity" type="number" class="form-control" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="CaloriesKcal" class="form-label">Ккал</label>
+                        <input asp-for="CaloriesKcal" type="number"  class="form-control" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="ProteinG" class="form-label">Белки, г</label>
+                        <input asp-for="ProteinG" type="number" class="form-control" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="FatG" class="form-label">Жиры, г</label>
+                        <input asp-for="FatG" type="number" class="form-control" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="CarbsG" class="form-label">Углеводы, г</label>
+                        <input asp-for="CarbsG" type="number"  class="form-control" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label">Описание</label>
+                    <textarea asp-for="Description" rows="4" class="form-control"></textarea>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input asp-for="IsAvailable" class="form-check-input" type="checkbox" />
+                    <label asp-for="IsAvailable" class="form-check-label">В наличии</label>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label class="form-label">Изображение</label>
+                    <input type="file" name="ImageFile" accept="image/*" class="form-control" />
+                    @if (!string.IsNullOrEmpty(Model?.Image))
+                    {
+                        <div class="mt-2">
+                            <img src="~/@Model.Image" alt="Главное изображение" style="max-width:100%; height:auto; max-height:220px;" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">@(isEdit ? "Сохранить" : "Добавить")</button>
+            <a asp-action="Index" asp-controller="AdminProduct" class="btn btn-secondary">Назад</a>
+        </div>
+    </form>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

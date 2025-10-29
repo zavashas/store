@@ -1,0 +1,79 @@
+﻿@using APISportFoodStore.Models
+@using WebAppSportFoodStore.Views.ViewModel
+@model IEnumerable<APISportFoodStore.Models.Cart>
+@{
+    ViewData["Title"] = "Корзина";
+    var allProducts = ViewBag.Products as List<APISportFoodStore.Models.Product> ?? new();
+    var addresses = ViewBag.Addresses as List<APISportFoodStore.Models.UserAddress>;
+    var cards = ViewBag.Cards as List<APISportFoodStore.Models.UserCard>;
+    var slots = ViewBag.Slots as List<APISportFoodStore.Models.DeliveryTimeSlot>;
+    decimal total = 0;
+    var userId = User.FindFirst("UserId")?.Value;
+}
+
+<h2 class="mb-4 text-center">Ваша корзина</h2>
+
+@if (!Model.Any())
+{
+    <div class="text-center">Корзина пуста.</div>
+}
+else
+{
+    <div class="mb-3 text-end">
+        <button id="clear-cart" class="btn btn-danger">Очистить корзину</button>
+    </div>
+
+    <table class="table align-middle">
+        <tbody>
+            @foreach (var item in Model)
+            {
+                var product = allProducts.FirstOrDefault(p => p.IdProduct == item.ProductId);
+                if (product == null) continue;
+
+                var productTotal = product.Price * item.Quantity;
+                total += productTotal;
+
+                <tr data-id="@item.IdCart" data-quantity="@item.Quantity" data-max="@product.Quantity">
+                    <td style="width: 150px;">
+                        @if (!string.IsNullOrWhiteSpace(product.Image))
+                        {
+                            <img src="~/@product.Image" alt="@product.Name" class="img-fluid rounded" style="height: 100px; object-fit: cover;" />
+                        }
+                        else
+                        {
+                            <div class="bg-light d-flex align-items-center justify-content-center" style="height: 100px;">Нет изображения</div>
+                        }
+                    </td>
+                    <td>
+                        <h5>@product.Name</h5>
+                        <p>@product.Description</p>
+                        <p><small class="text-muted">Цена: <strong>@product.Price ₽</strong></small></p>
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center align-items-center mb-2">
+                            <button class="btn btn-outline-secondary btn-sm quantity-change me-1" data-delta="-1">-</button>
+                            <span class="mx-2">@item.Quantity</span>
+                            <button class="btn btn-outline-secondary btn-sm quantity-change ms-1" data-delta="1" @(item.Quantity >= product.Quantity ? "disabled" : "")>+</button>
+                        </div>
+                        <p class="fw-bold mb-2">Итого: @productTotal ₽</p>
+                        <button class="btn btn-outline-danger btn-sm remove-item">Удалить</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="mt-4 border-top pt-3 d-flex justify-content-between align-items-center">
+        <h4>Общая сумма: <strong>@total ₽</strong></h4>
+        <a class="btn btn-success" href="/checkout">Оформить заказ</a>
+
+    </div>
+}
+
+
+@section Scripts {
+    <script src="~/js/cart.js" defer></script>
+    <script src="~/js/address.js" defer></script>
+    <script src="~/js/order.js" defer></script>
+    <script src="~/js/card.js" defer></script>
+}

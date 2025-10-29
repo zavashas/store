@@ -1,0 +1,39 @@
+﻿@model int
+<div class="modal fade" id="addCardModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="/UserCard/Add">
+                <input type="hidden" name="UserId" value="@Model" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Новая карта</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Номер карты</label>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="part1" name="part1" maxlength="4" class="form-control" required />
+                            <input type="text" id="part2" name="part2" maxlength="4" class="form-control" required />
+                            <input type="text" id="part3" name="part3" maxlength="4" class="form-control" required />
+                            <input type="text" id="part4" name="part4" maxlength="4" class="form-control" required />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label>Срок действия</label>
+                            <input type="text" id="Expiry" name="Expiry" class="form-control" placeholder="MM/YY" required />
+                        </div>
+                        <div class="col">
+                            <label>CVV</label>
+                            <input type="password" id="CVV" name="CVV" class="form-control" maxlength="3" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

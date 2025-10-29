@@ -1,0 +1,183 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - WebAppSportFoodStore</title>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/WebAppSportFoodStore.styles.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+   
+</head>
+<body>
+    <header class="ff-navbar shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand ff-logo" asp-area="" asp-controller="Home" asp-action="Index" title="На главную">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M2 9h2v6H2V9zm3-3h2v12H5V6zm12 0h2v12h-2V6zM20 9h2v6h-2V9zM8 10h8v4H8v-4z" />
+                    </svg>
+                    <span>FitFuel</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#ffNav"
+                        aria-controls="ffNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="ffNav">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")"
+                               asp-area="" asp-controller="Home" asp-action="Index">
+                                Главная
+                            </a>
+                        </li>
+
+                        <!-- Каталог -->
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Catalog" ? "active" : "")"
+                               asp-controller="Catalog" asp-action="Index">
+                                Каталог
+                            </a>
+                        </li>
+
+                        <!-- Избранное -->
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Favorites" ? "active" : "")"
+                               asp-controller="Favorites" asp-action="Index">
+                                <i class="bi bi-heart"></i> Избранное
+                            </a>
+                        </li>
+
+                        <!-- Корзина -->
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Cart" ? "active" : "")"
+                               asp-controller="Cart" asp-action="Index">
+                                <i class="bi bi-bag"></i> Корзина
+                            </a>
+                        </li>
+
+                        <!-- Для администратора -->
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Admin" asp-action="Index">
+                                    Для администратора
+                                </a>
+                            </li>
+                        }
+
+                        @if (User.IsInRole("Manager"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Support" asp-action="Manager">
+                                    Чат
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Admin" asp-action="Orders">
+                                    Заказы
+                                </a>
+                            </li>
+                        }
+                    </ul>
+
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        @if (User.Identity?.IsAuthenticated ?? false)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Profile" asp-action="Index">
+                                    <i class="bi bi-person-circle"></i> @User.Identity.Name
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-box-arrow-right"></i> Выход
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Account" asp-action="Authorization">
+                                    <i class="bi bi-box-arrow-in-right"></i> Вход
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Account" asp-action="Register">
+                                    <i class="bi bi-person-plus"></i> Регистрация
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main role="main" class="py-4">
+            @RenderBody()
+        </main>
+
+        <form id="__af" method="post" style="display:none;">
+            @Html.AntiForgeryToken()
+        </form>
+    </div>
+
+    <footer class="ff-footer mt-5">
+        <div class="container py-5">
+            <div class="row g-4">
+                <div class="col-12 col-md-4">
+                    <div class="ff-logo mb-2" style="color:#e2e8f0;">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M2 9h2v6H2V9zm3-3h2v12H5V6zm12 0h2v12h-2V6zM20 9h2v6h-2V9zM8 10h8v4H8v-4z" />
+                        </svg>
+                        <span>FitFuel</span>
+                    </div>
+                    <p class="mb-0">Интернет-магазин спортивного питания: качество, скорость и поддержка.</p>
+                </div>
+                <div class="col-6 col-md-2">
+                    <h6 class="text-uppercase mb-3">Навигация</h6>
+                    <ul class="list-unstyled">
+                        <li><a asp-controller="Catalog" asp-action="Index">Каталог</a></li>
+                        <li><a asp-controller="Favorites" asp-action="Index">Избранное</a></li>
+                        <li><a asp-controller="Cart" asp-action="Index">Корзина</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-md-3">
+                    <h6 class="text-uppercase mb-3">Поддержка</h6>
+                    <ul class="list-unstyled">
+                        <li>Наш email: fitfuel@mail.ru</li>
+                        <li><a asp-controller="Chat" asp-action="Index">Чат поддержки</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="ff-footnote py-3">
+            <div class="container d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+                <div>© @DateTime.Now.Year — FitFuel</div>
+                <div class="small">
+                    Сделано с <i class="bi bi-heart-fill"></i> и <i class="bi bi-lightning"></i>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="~/js/chat.js" asp-append-version="true"></script>
+    <script src="~/js/hotkeys.js"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
