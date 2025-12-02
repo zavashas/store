@@ -6,6 +6,11 @@
 
 <div class="container py-5">
     <h1 class="h3 fw-bold mb-4">Профиль</h1>
+    <div class="d-flex justify-content-end mb-3">
+        <button class="btn btn-outline-secondary" onclick="toggleTheme()">
+            <i class="bi bi-moon-stars"></i> Сменить тему
+        </button>
+    </div>
 
     @if (!string.IsNullOrWhiteSpace(Model.Error))
     {

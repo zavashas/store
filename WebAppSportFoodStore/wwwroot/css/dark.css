@@ -1,0 +1,203 @@
+﻿/* ==== БАЗА ==== */
+body {
+    background: #0f1116 !important;
+    color: #e5e7eb !important;
+}
+
+a {
+    color: #93c5fd !important;
+}
+
+    a:hover {
+        color: #bfdbfe !important;
+    }
+
+/* ==== NAVBAR ==== */
+.ff-navbar {
+    background: linear-gradient(90deg, #1f2937 0%, #111827 100%) !important;
+}
+
+    .ff-navbar .nav-link,
+    .ff-navbar .navbar-brand {
+        color: #e2e8f0 !important;
+    }
+
+        .ff-navbar .nav-link.active,
+        .ff-navbar .nav-link:hover {
+            color: #ffffff !important;
+            opacity: 0.9;
+        }
+
+/* ==== FOOTER ==== */
+.ff-footer {
+    background: #111827 !important;
+    color: #cbd5e1 !important;
+}
+
+    .ff-footer a {
+        color: #e5e7eb !important;
+    }
+
+        .ff-footer a:hover {
+            text-decoration: underline;
+        }
+
+/* ==== КАРТОЧКИ ==== */
+.card,
+.table-section,
+.admin-container,
+.admin-card,
+.product-card,
+.product-hero,
+.product-media,
+.cart-card {
+    background: #1a1d24 !important;
+    border-color: #2a2d35 !important;
+    color: #e5e5e5 !important;
+}
+
+    .card:hover,
+    .admin-card:hover {
+        background: #1f222b !important;
+        border-color: #3b3f48 !important;
+    }
+
+/* ==== ФОРМЫ ==== */
+.form-control {
+    background: #111417 !important;
+    border-color: #2d3138 !important;
+    color: #e5e7eb !important;
+}
+
+    .form-control:focus {
+        background: #1a1d21 !important;
+        border-color: #4f86ff !important;
+        color: #fff !important;
+        box-shadow: 0 0 0 0.2rem rgba(79,134,255,0.25) !important;
+    }
+
+.form-label {
+    color: #cbd5e1 !important;
+}
+
+/* ==== BUTTONS ==== */
+.btn {
+    background: #1f242c !important;
+    border-color: #374151 !important;
+    color: #e5e7eb !important;
+}
+
+    .btn:hover {
+        background: #2b3038 !important;
+    }
+
+.btn-primary {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+    .btn-primary:hover {
+        background: #1d4ed8 !important;
+    }
+
+.btn-outline-secondary {
+    border-color: #4b5563 !important;
+    color: #e5e7eb !important;
+}
+
+    .btn-outline-secondary:hover {
+        background: #374151 !important;
+    }
+
+/* ==== BADGES ==== */
+.badge {
+    color: #e5e7eb !important;
+}
+
+.badge-success {
+    background: #065f46 !important;
+    border-color: #0f766e !important;
+}
+
+.badge-danger {
+    background: #7f1d1d !important;
+    border-color: #b91c1c !important;
+}
+
+/* ==== ТАБЛИЦЫ ==== */
+.admin-table th {
+    background: #1f242c !important;
+    color: #e5e7eb !important;
+}
+
+.admin-table td {
+    background: #181c22 !important;
+    color: #d1d5db !important;
+}
+
+.admin-table tr:hover td {
+    background: #242931 !important;
+}
+
+/* ==== PRODUCT CARD ==== */
+.img-wrap {
+    background: #16191d !important;
+}
+
+.price-tag {
+    color: #93c5fd !important;
+}
+
+.nutr-chip {
+    background: #242931 !important;
+    border-color: #3b414b !important;
+    color: #cbd5e1 !important;
+}
+
+/* ==== FAVORITES HEART ==== */
+.fav-btn,
+.btn-heart {
+    background: #1f242c !important;
+    border-color: #374151 !important;
+}
+
+    .fav-btn svg,
+    .btn-heart svg {
+        stroke: #e5e7eb !important;
+    }
+
+    /* Active (красное сердечко) */
+    .fav-btn.active svg,
+    .btn-heart.active svg {
+        fill: #e03131 !important;
+        stroke: #e03131 !important;
+    }
+
+/* ==== PROFILE PAGE ==== */
+.card.bg-light {
+    background: #1e2229 !important;
+    border-color: #2a2f36 !important;
+    color: #e5e5e5 !important;
+}
+
+.text-muted {
+    color: #94a3b8 !important;
+}
+
+/* ==== SCROLLBAR (красиво) ==== */
+::-webkit-scrollbar {
+    width: 9px;
+}
+
+::-webkit-scrollbar-track {
+    background: #111417;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 10px;
+}
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #4b5563;
+    }
